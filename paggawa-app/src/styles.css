@@ -101,8 +101,10 @@ button {
 .data-pill,
 .status-pill,
 .category-pill,
+.skill-badge,
 .guardrail-footer span,
-.trust-list span {
+.trust-list span,
+.trust-badge {
   display: inline-flex;
   align-items: center;
   min-height: 30px;
@@ -230,6 +232,48 @@ button {
   color: #ffffff;
 }
 
+.filter-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.filter-button {
+  flex: 0 0 auto;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: var(--surface);
+  color: var(--muted);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.filter-button.active,
+.filter-button:hover,
+.filter-button:focus-visible {
+  border-color: var(--green);
+  background: var(--green-soft);
+  color: var(--green);
+  outline: none;
+}
+
+.quest-filter-grid {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.quest-board-list {
+  display: grid;
+  gap: 14px;
+}
+
 .dashboard-stack {
   display: grid;
   gap: 24px;
@@ -288,6 +332,14 @@ button {
   gap: 14px;
 }
 
+.form-panel {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
 .section-heading {
   display: grid;
   gap: 4px;
@@ -308,6 +360,11 @@ button {
 
 .preview-card.featured {
   border-top: 5px solid var(--blue);
+}
+
+.preview-card.selected {
+  border-color: var(--green);
+  outline: 3px solid rgba(23, 107, 85, 0.14);
 }
 
 .preview-card h3 {
@@ -333,6 +390,17 @@ button {
 .status-pill {
   background: var(--blue-soft);
   color: var(--blue);
+}
+
+.skill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.skill-badge {
+  background: var(--surface-soft);
+  color: var(--ink);
 }
 
 .detail-list {
@@ -366,15 +434,368 @@ button {
   font-size: 0.9rem;
 }
 
+.worker-discovery-layout {
+  display: grid;
+  gap: 14px;
+}
+
+.worker-profile-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.worker-profile-panel > p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.profile-metrics,
+.registry-metrics {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.profile-metrics div,
+.registry-metrics div {
+  display: grid;
+  gap: 2px;
+}
+
+.profile-metrics dt,
+.registry-metrics dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.profile-metrics dd,
+.registry-metrics dd {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.profile-subsection {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-subsection h3,
+.registry-row h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.sample-work-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--ink);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.request-form {
+  display: grid;
+  gap: 14px;
+}
+
+.form-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.form-field {
+  display: grid;
+  gap: 6px;
+}
+
+.form-field span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+}
+
+.compact-field select,
+.compact-field input {
+  min-height: 40px;
+}
+
+.form-field textarea {
+  resize: vertical;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+  border-color: var(--green);
+  outline: 3px solid rgba(23, 107, 85, 0.14);
+}
+
+.primary-button,
+.placeholder-button,
+.secondary-button {
+  min-height: 44px;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: 800;
+}
+
+.primary-button {
+  border: 1px solid var(--green);
+  background: var(--green);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.primary-button:hover,
+.primary-button:focus-visible {
+  outline: 3px solid rgba(23, 107, 85, 0.18);
+}
+
+.placeholder-button {
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
+.secondary-button {
+  border: 1px solid var(--green);
+  background: var(--surface);
+  color: var(--green);
+  cursor: pointer;
+}
+
+.secondary-button:hover,
+.secondary-button:focus-visible {
+  background: var(--green-soft);
+  outline: 3px solid rgba(23, 107, 85, 0.14);
+}
+
+.form-status,
+.form-error,
+.empty-state {
+  margin: 0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  line-height: 1.45;
+  font-weight: 700;
+}
+
+.form-status {
+  border: 1px solid rgba(23, 107, 85, 0.24);
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.form-error {
+  border: 1px solid rgba(184, 72, 72, 0.3);
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.compact-error {
+  padding: 8px 10px;
+  font-size: 0.88rem;
+}
+
+.empty-state {
+  border: 1px dashed var(--line);
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
 .trust-list {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.trust-list span {
+.trust-list span,
+.trust-badge {
   background: var(--amber-soft);
   color: #6f4300;
+}
+
+.registry-note {
+  margin: 0;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.registry-list {
+  display: grid;
+  gap: 12px;
+}
+
+.registry-row {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.registry-header {
+  display: grid;
+  gap: 10px;
+}
+
+.registry-header > div {
+  display: grid;
+  gap: 8px;
+}
+
+.registry-header p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.registry-bio {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.checkbox-fieldset {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.checkbox-fieldset legend {
+  padding: 0 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.checkbox-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.checkbox-field {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 10px;
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.checkbox-field input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--green);
+}
+
+.note-panel {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.note-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.note-heading span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.note-heading strong {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  min-height: 28px;
+  border-radius: 999px;
+  background: var(--amber-soft);
+  color: #6f4300;
+  font-size: 0.8rem;
+}
+
+.note-form {
+  display: grid;
+  gap: 8px;
+}
+
+.note-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.note-list li {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--surface-soft);
+}
+
+.note-list p,
+.note-empty {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+.note-list time,
+.note-empty {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
 }
 
 .guardrail-footer {
@@ -403,6 +824,33 @@ button {
 
   .surface-options {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quest-filter-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .form-field-wide {
+    grid-column: 1 / -1;
+  }
+
+  .worker-discovery-layout {
+    grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
+    align-items: start;
+  }
+
+  .profile-metrics,
+  .registry-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .registry-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
   }
 }
 

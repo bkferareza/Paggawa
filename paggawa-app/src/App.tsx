@@ -3,14 +3,24 @@ import { MobileShell } from "./apps/mobile/MobileShell";
 import { QuestShell } from "./apps/quest/QuestShell";
 import { SurfaceSelector } from "./shared/components/SurfaceSelector";
 import {
-  getShellSummary,
   privacyDisplayRules,
   type SurfaceKey,
+  usePrototypeState,
 } from "./shared/state/prototypeState";
 
 export default function App() {
   const [activeSurface, setActiveSurface] = useState<SurfaceKey | null>(null);
-  const shellSummary = getShellSummary();
+  const {
+    barangayNotes,
+    createBarangayNote,
+    createJobRequest,
+    createWorkerProfile,
+    jobRequests,
+    openJobRequests,
+    shellSummary,
+    updateQuestJobStatus,
+    workerProfiles,
+  } = usePrototypeState();
 
   return (
     <main className="app-shell">
@@ -29,14 +39,29 @@ export default function App() {
       )}
 
       {activeSurface === "mobile" && (
-        <MobileShell onBack={() => setActiveSurface(null)} />
+        <MobileShell
+          jobRequests={jobRequests}
+          onBack={() => setActiveSurface(null)}
+          onCreateJobRequest={createJobRequest}
+          openJobRequests={openJobRequests}
+          workerProfiles={workerProfiles}
+        />
       )}
 
       {activeSurface === "quest" && (
-        <QuestShell onBack={() => setActiveSurface(null)} />
+        <QuestShell
+          barangayNotes={barangayNotes}
+          jobRequests={jobRequests}
+          onBack={() => setActiveSurface(null)}
+          onCreateBarangayNote={createBarangayNote}
+          onCreateJobRequest={createJobRequest}
+          onCreateWorkerProfile={createWorkerProfile}
+          onUpdateQuestJobStatus={updateQuestJobStatus}
+          workerProfiles={workerProfiles}
+        />
       )}
 
-      <footer className="guardrail-footer" aria-label="Lane 01 privacy guardrails">
+      <footer className="guardrail-footer" aria-label="Lane 02 privacy guardrails">
         {privacyDisplayRules.map((rule) => (
           <span key={rule}>{rule}</span>
         ))}

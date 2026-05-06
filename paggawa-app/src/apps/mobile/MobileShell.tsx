@@ -2,13 +2,27 @@ import { useState } from "react";
 import { ShellHeader } from "../../shared/components/ShellHeader";
 import { ResidentDashboard } from "./resident/ResidentDashboard";
 import { WorkerDashboard } from "./worker/WorkerDashboard";
-import type { MobileMode } from "../../shared/state/prototypeState";
+import type { JobRequest, WorkerProfile } from "../../shared/domain/models";
+import type {
+  CreateJobRequestInput,
+  MobileMode,
+} from "../../shared/state/prototypeState";
 
 type MobileShellProps = {
+  jobRequests: JobRequest[];
   onBack: () => void;
+  onCreateJobRequest: (input: CreateJobRequestInput) => JobRequest;
+  openJobRequests: JobRequest[];
+  workerProfiles: WorkerProfile[];
 };
 
-export function MobileShell({ onBack }: MobileShellProps) {
+export function MobileShell({
+  jobRequests,
+  onBack,
+  onCreateJobRequest,
+  openJobRequests,
+  workerProfiles,
+}: MobileShellProps) {
   const [mode, setMode] = useState<MobileMode>("resident");
 
   return (
@@ -16,7 +30,7 @@ export function MobileShell({ onBack }: MobileShellProps) {
       <ShellHeader
         eyebrow="Paggawa Mobile"
         title="Phone-first demo surface"
-        description="Resident and worker dashboards share the same mock data layer."
+        description="Resident and worker dashboards share the same local job request list."
         onBack={onBack}
       />
 
@@ -39,7 +53,19 @@ export function MobileShell({ onBack }: MobileShellProps) {
         </button>
       </div>
 
-      {mode === "resident" ? <ResidentDashboard /> : <WorkerDashboard />}
+      {mode === "resident" ? (
+        <ResidentDashboard
+          jobRequests={jobRequests}
+          onCreateJobRequest={onCreateJobRequest}
+          openJobRequests={openJobRequests}
+          workerProfiles={workerProfiles}
+        />
+      ) : (
+        <WorkerDashboard
+          openJobRequests={openJobRequests}
+          workerProfiles={workerProfiles}
+        />
+      )}
     </section>
   );
 }

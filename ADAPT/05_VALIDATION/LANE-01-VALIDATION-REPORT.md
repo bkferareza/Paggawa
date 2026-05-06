@@ -1,86 +1,178 @@
 # LANE-01 Validation Report
 
-STATUS: BUILT_PENDING_VALIDATION
+STATUS: PASSED
 
-## Files Created
+## Validation Status
 
-Application files were created under `paggawa-app/`:
+Lane 01 is build-validated.
 
-- `package.json`
-- `index.html`
-- `tsconfig.json`
-- `vite.config.ts`
-- `README.md`
-- `src/main.tsx`
-- `src/App.tsx`
-- `src/styles.css`
-- `src/apps/mobile/MobileShell.tsx`
-- `src/apps/mobile/resident/ResidentDashboard.tsx`
-- `src/apps/mobile/worker/WorkerDashboard.tsx`
-- `src/apps/quest/QuestShell.tsx`
-- `src/apps/quest/barangay/BarangayDashboard.tsx`
-- `src/shared/components/SurfaceSelector.tsx`
-- `src/shared/components/ShellHeader.tsx`
-- `src/shared/components/StatCard.tsx`
-- `src/shared/components/JobPreviewCard.tsx`
-- `src/shared/components/WorkerPreviewCard.tsx`
-- `src/shared/data/seedData.ts`
-- `src/shared/domain/models.ts`
-- `src/shared/state/prototypeState.ts`
-- `src/shared/utils/formatting.ts`
+Node.js LTS and npm were installed/enabled, project dependencies were installed, and the production build completed successfully.
 
-## Expected Behavior
+## Toolchain Check Result
 
-- The app starts at a surface selector with `Paggawa Mobile` and `Paggawa Quest`.
-- Selecting `Paggawa Mobile` opens a phone-first shell.
-- Paggawa Mobile can switch between `Resident` and `Worker` dashboards.
-- The Resident dashboard shows nearby worker count, open job request count, worker previews, and job previews.
-- The Worker dashboard shows nearby job count, sample completed jobs and rating, a sample worker profile summary, and open job previews.
-- Selecting `Paggawa Quest` opens the barangay staff dashboard.
-- Paggawa Quest shows quest board preview, registered workers count, assisted requests count, and worker registry previews.
-- Both surfaces read from shared domain types, seed data, state helpers, and preview components.
-- Public previews show approximate location only and do not include exact address or contact details.
+| Check | Result |
+|---|---|
+| Initial `node -v` | FAILED - command was not found before installation |
+| Initial `npm -v` | FAILED - command was not found before installation |
+| `winget --version` | PASS - `v1.28.240` |
+| Node.js LTS install | PASS - `winget install OpenJS.NodeJS.LTS` installed Node.js `v24.15.0` |
+| PATH refresh | PASS - machine/user PATH refresh exposed `C:\Program Files\nodejs\` |
+| PowerShell npm enablement | PASS - process-scoped execution policy allowed the local npm shim for validation |
+| Final `node -v` | PASS - `v24.15.0` |
+| Final `npm -v` | PASS - `11.12.1` |
 
-## Validation Checklist
+No permanent execution policy change was made. Already-open PowerShell terminals may need to be reopened or have PATH refreshed before raw `node`/`npm` commands are visible.
 
-- [ ] App dependencies installed.
-- [ ] App loads successfully through Vite.
-- [ ] Surface selector is visible.
-- [ ] User can enter Paggawa Mobile.
-- [ ] User can switch between Resident and Worker mobile dashboards.
-- [ ] Resident dashboard displays shared seed workers and jobs.
-- [ ] Worker dashboard displays shared seed jobs and sample rating data.
-- [ ] User can return to selector and enter Paggawa Quest.
-- [ ] Barangay dashboard displays quest board and registry preview.
-- [ ] No Lane 02+ workflow behavior is present.
+## Commands Run
+
+```powershell
+node -v
+npm -v
+winget --version
+winget install OpenJS.NodeJS.LTS
+$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+node -v
+npm -v
+cd paggawa-app
+npm install
+npm run build
+rg --files src
+rg -n "SurfaceSelector|MobileShell|ResidentDashboard|WorkerDashboard|QuestShell|BarangayDashboard|seed|mock|prototype" src
+rg -n -i "<form|onSubmit|submit|create job|job creation|respond|response form|matching|match|reputation|complete|completion|review|backend|api|database|auth|login|password|payment|escrow|gps|map|chat|lgu" src
+```
+
+## npm Install Result
+
+Result: PASSED
+
+```text
+added 68 packages, and audited 69 packages in 17s
+```
+
+`npm install` created `paggawa-app/package-lock.json`.
+
+Audit note:
+
+```text
+2 moderate severity vulnerabilities
+```
+
+No audit fix was applied because validation did not authorize dependency upgrades or breaking changes.
+
+## npm Run Build Result
+
+Result: PASSED
+
+```text
+> paggawa-app@0.1.0 build
+> tsc && vite build
+
+vite v5.4.21 building for production...
+44 modules transformed.
+dist/index.html
+dist/assets/index-Bhd-1IE1.css
+dist/assets/index-CAEiRzU4.js
+built in 911ms
+```
+
+## Checklist Result
+
+| # | Check | Result |
+|---|---|---|
+| 1 | App scaffold exists. | PASS |
+| 2 | Surface selector or landing shell exists. | PASS |
+| 3 | Paggawa Mobile shell exists. | PASS |
+| 4 | Resident dashboard placeholder exists. | PASS |
+| 5 | Worker dashboard placeholder exists. | PASS |
+| 6 | Paggawa Quest shell exists. | PASS |
+| 7 | Barangay dashboard placeholder exists. | PASS |
+| 8 | Shared navigation/shell components exist. | PASS |
+| 9 | Seed data display exists. | PASS |
+| 10 | App dependencies install successfully. | PASS |
+| 11 | Production build succeeds. | PASS |
+| 12 | No job creation forms exist. | PASS |
+| 13 | No worker response forms exist. | PASS |
+| 14 | No matching logic exists. | PASS |
+| 15 | No reputation update logic exists. | PASS |
+| 16 | No completion workflow exists. | PASS |
+| 17 | No review form exists. | PASS |
+| 18 | No backend/API/database exists. | PASS |
+| 19 | No authentication/payments/escrow exists. | PASS |
+| 20 | No GPS/maps/chat/official LGU integration exists. | PASS |
+
+## Files Inspected
+
+- `ADAPT/00_SYSTEM/CURRENT_STATE.json`
+- `ADAPT/04_BUILD_LANES/LANE-01-APP-SHELL.md`
+- `ADAPT/05_VALIDATION/LANE-01-VALIDATION-REPORT.md`
+- `paggawa-app/package.json`
+- `paggawa-app/package-lock.json`
+- `paggawa-app/src/App.tsx`
+- `paggawa-app/src/main.tsx`
+- `paggawa-app/src/styles.css`
+- `paggawa-app/src/apps/mobile/MobileShell.tsx`
+- `paggawa-app/src/apps/mobile/resident/ResidentDashboard.tsx`
+- `paggawa-app/src/apps/mobile/worker/WorkerDashboard.tsx`
+- `paggawa-app/src/apps/quest/QuestShell.tsx`
+- `paggawa-app/src/apps/quest/barangay/BarangayDashboard.tsx`
+- `paggawa-app/src/shared/components/SurfaceSelector.tsx`
+- `paggawa-app/src/shared/components/ShellHeader.tsx`
+- `paggawa-app/src/shared/components/StatCard.tsx`
+- `paggawa-app/src/shared/components/JobPreviewCard.tsx`
+- `paggawa-app/src/shared/components/WorkerPreviewCard.tsx`
+- `paggawa-app/src/shared/data/seedData.ts`
+- `paggawa-app/src/shared/domain/models.ts`
+- `paggawa-app/src/shared/state/prototypeState.ts`
+- `paggawa-app/src/shared/utils/formatting.ts`
+
+## Scope Confirmation
+
+Lane 01 stayed within the approved app shell scope.
+
+Confirmed in scope:
+
+- app scaffold
+- surface selector / landing shell
+- Paggawa Mobile shell
+- Resident dashboard placeholder
+- Worker dashboard placeholder
+- Paggawa Quest shell
+- Barangay dashboard placeholder
+- shared navigation/shell components
+- seed data display
+
+Confirmed not implemented:
+
+- job creation forms
+- worker response forms
+- matching logic
+- reputation update logic
+- completion workflow
+- review form
+- backend
+- API
+- database
+- authentication
+- payments
+- escrow
+- GPS tracking
+- maps
+- chat
+- official LGU integration
+
+Static `matched`, `completed`, `rating`, `completedJobs`, `JobResponse`, `Match`, and `Review` references are read-only seed/model placeholders only. No mutation workflow, form, service, backend integration, or future-lane behavior is implemented.
 
 ## Known Limitations
 
-- Validation has not been marked passed because the app has not been installed, run, and checked in a browser in this lane build step.
-- The app uses static seed/mock data only.
-- There is no LocalStorage persistence yet because Lane 01 does not create or mutate records.
-- Placeholder domain types exist for later entities, but their behavior is not implemented.
+- Runtime browser behavior was not manually inspected after the production build.
+- `npm install` reported two moderate audit findings; they were not remediated during Lane 01 validation.
+- Already-open PowerShell terminals may need PATH refresh or reopening after the Node.js installation.
+- The app intentionally uses static seed/mock data only.
+- No LocalStorage persistence exists yet because Lane 01 does not create or mutate records.
 
-## How To Run
+## Next Action
 
-From `paggawa-app/`:
-
-```bash
-npm install
-npm run dev
+```text
+BUILD_LANE_02_JOB_REQUESTS
 ```
-
-Open the local Vite URL shown in the terminal.
-
-## Items Intentionally Not Built
-
-- Job creation forms
-- Worker response forms
-- Matching logic
-- Reputation update logic
-- Completion workflow
-- Review form
-- Backend, API, database, or authentication
-- Payments or escrow
-- GPS tracking, maps, or chat
-- Official LGU integration

@@ -1,6 +1,6 @@
 # LANE-02 - Job Requests
 
-STATUS: NOT_STARTED
+STATUS: VALIDATED
 
 ## Purpose
 

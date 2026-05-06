@@ -1,16 +1,56 @@
-import { JobPreviewCard } from "../../../shared/components/JobPreviewCard";
+import { useState } from "react";
 import { StatCard } from "../../../shared/components/StatCard";
-import { WorkerPreviewCard } from "../../../shared/components/WorkerPreviewCard";
+import type {
+  ComplaintNote,
+  JobRequest,
+  QuestManageableJobStatus,
+  WorkerProfile,
+} from "../../../shared/domain/models";
 import {
   getAssistedRequests,
   getOpenJobRequests,
+  getQuestBoardJobs,
   getRegisteredWorkers,
+  getWorkerRegistryWorkers,
+  type CreateBarangayNoteInput,
+  type CreateJobRequestInput,
+  type CreateWorkerProfileInput,
 } from "../../../shared/state/prototypeState";
+import { AssistedJobRequestForm } from "./AssistedJobRequestForm";
+import { QuestBoardView } from "./QuestBoardView";
+import { WorkerRegistryPreview } from "./WorkerRegistryPreview";
+import { WorkerRegistrationForm } from "./WorkerRegistrationForm";
 
-export function BarangayDashboard() {
-  const questBoardJobs = getOpenJobRequests();
-  const registeredWorkers = getRegisteredWorkers();
-  const assistedRequests = getAssistedRequests();
+type BarangayDashboardProps = {
+  barangayNotes: ComplaintNote[];
+  jobRequests: JobRequest[];
+  onCreateBarangayNote: (input: CreateBarangayNoteInput) => ComplaintNote;
+  onCreateJobRequest: (input: CreateJobRequestInput) => JobRequest;
+  onCreateWorkerProfile: (input: CreateWorkerProfileInput) => WorkerProfile;
+  onUpdateQuestJobStatus: (
+    jobId: string,
+    status: QuestManageableJobStatus,
+  ) => void;
+  workerProfiles: WorkerProfile[];
+};
+
+export function BarangayDashboard({
+  barangayNotes,
+  jobRequests,
+  onCreateBarangayNote,
+  onCreateJobRequest,
+  onCreateWorkerProfile,
+  onUpdateQuestJobStatus,
+  workerProfiles,
+}: BarangayDashboardProps) {
+  const [lastCreatedJob, setLastCreatedJob] = useState<JobRequest | null>(null);
+  const [lastCreatedWorker, setLastCreatedWorker] =
+    useState<WorkerProfile | null>(null);
+  const questBoardJobs = getOpenJobRequests(jobRequests);
+  const allQuestBoardJobs = getQuestBoardJobs(jobRequests);
+  const registeredWorkers = getRegisteredWorkers(workerProfiles);
+  const workerRegistry = getWorkerRegistryWorkers(workerProfiles);
+  const assistedRequests = getAssistedRequests(jobRequests);
 
   return (
     <div className="dashboard-stack quest-grid">
@@ -35,29 +75,40 @@ export function BarangayDashboard() {
         />
       </div>
 
-      <section className="dashboard-section">
-        <div className="section-heading">
-          <p className="eyebrow">Barangay dashboard</p>
-          <h2>Quest board preview</h2>
-        </div>
-        <div className="card-grid">
-          {questBoardJobs.slice(0, 4).map((job) => (
-            <JobPreviewCard key={job.id} job={job} showRequesterType />
-          ))}
-        </div>
-      </section>
+      <AssistedJobRequestForm
+        onCreateJobRequest={onCreateJobRequest}
+        onCreated={setLastCreatedJob}
+      />
 
-      <section className="dashboard-section">
-        <div className="section-heading">
-          <p className="eyebrow">Worker registry</p>
-          <h2>Sample registry preview</h2>
-        </div>
-        <div className="card-grid">
-          {registeredWorkers.slice(0, 4).map((worker) => (
-            <WorkerPreviewCard key={worker.id} worker={worker} />
-          ))}
-        </div>
-      </section>
+      {lastCreatedJob && (
+        <p className="form-status" role="status">
+          Created assisted request: {lastCreatedJob.title}
+        </p>
+      )}
+
+      <QuestBoardView
+        jobs={allQuestBoardJobs}
+        notes={barangayNotes}
+        onCreateBarangayNote={onCreateBarangayNote}
+        onUpdateQuestJobStatus={onUpdateQuestJobStatus}
+      />
+
+      <WorkerRegistrationForm
+        onCreateWorkerProfile={onCreateWorkerProfile}
+        onCreated={setLastCreatedWorker}
+      />
+
+      {lastCreatedWorker && (
+        <p className="form-status" role="status">
+          Registered worker: {lastCreatedWorker.displayName}
+        </p>
+      )}
+
+      <WorkerRegistryPreview
+        notes={barangayNotes}
+        onCreateBarangayNote={onCreateBarangayNote}
+        workers={workerRegistry}
+      />
     </div>
   );
 }

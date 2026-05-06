@@ -1,6 +1,6 @@
 # LANE-04 - Barangay Quest Board
 
-STATUS: NOT_STARTED
+STATUS: VALIDATED
 
 ## Purpose
 

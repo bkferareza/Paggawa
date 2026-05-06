@@ -1,6 +1,6 @@
 # LANE-03 - Worker Discovery
 
-STATUS: NOT_STARTED
+STATUS: VALIDATED
 
 ## Purpose
 

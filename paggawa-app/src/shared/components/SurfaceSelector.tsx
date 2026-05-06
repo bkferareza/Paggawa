@@ -12,8 +12,8 @@ export function SurfaceSelector({ summary, onSelect }: SurfaceSelectorProps) {
         <p className="eyebrow">Choose a surface</p>
         <h2>One prototype, two working spaces</h2>
         <p>
-          Lane 01 shows the shared shell and mock-data dashboards only. The same
-          seed data powers resident, worker, and barangay previews.
+          Lane 02 adds local job request creation while keeping resident, worker,
+          and barangay previews on the same data layer.
         </p>
       </div>
 

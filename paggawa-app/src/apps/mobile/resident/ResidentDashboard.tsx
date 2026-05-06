@@ -1,18 +1,42 @@
-import { JobPreviewCard } from "../../../shared/components/JobPreviewCard";
+import { useState } from "react";
 import { StatCard } from "../../../shared/components/StatCard";
-import { WorkerPreviewCard } from "../../../shared/components/WorkerPreviewCard";
+import type { JobRequest, WorkerProfile } from "../../../shared/domain/models";
 import {
-  getOpenJobRequests,
+  CURRENT_RESIDENT_USER_ID,
+  getResidentJobRequests,
   getResidentPreviewWorkers,
+  type CreateJobRequestInput,
 } from "../../../shared/state/prototypeState";
+import { CreateJobRequestForm } from "./CreateJobRequestForm";
+import { NearbyWorkersView } from "./NearbyWorkersView";
+import { ResidentJobRequests } from "./ResidentJobRequests";
 
-export function ResidentDashboard() {
-  const nearbyWorkers = getResidentPreviewWorkers();
-  const openJobs = getOpenJobRequests();
+type ResidentDashboardProps = {
+  jobRequests: JobRequest[];
+  onCreateJobRequest: (input: CreateJobRequestInput) => JobRequest;
+  openJobRequests: JobRequest[];
+  workerProfiles: WorkerProfile[];
+};
+
+export function ResidentDashboard({
+  jobRequests,
+  onCreateJobRequest,
+  openJobRequests,
+  workerProfiles,
+}: ResidentDashboardProps) {
+  const [lastCreatedJob, setLastCreatedJob] = useState<JobRequest | null>(null);
+  const nearbyWorkers = getResidentPreviewWorkers(workerProfiles);
+  const residentJobs = getResidentJobRequests(CURRENT_RESIDENT_USER_ID, jobRequests);
 
   return (
     <div className="dashboard-stack">
       <div className="stat-grid">
+        <StatCard
+          label="My requests"
+          value={residentJobs.length}
+          detail="Open and local-only"
+          tone="blue"
+        />
         <StatCard
           label="Nearby workers"
           value={nearbyWorkers.length}
@@ -21,35 +45,26 @@ export function ResidentDashboard() {
         />
         <StatCard
           label="Open job requests"
-          value={openJobs.length}
+          value={openJobRequests.length}
           detail="Visible with approximate area only"
           tone="amber"
         />
       </div>
 
-      <section className="dashboard-section">
-        <div className="section-heading">
-          <p className="eyebrow">Resident dashboard</p>
-          <h2>Nearby worker previews</h2>
-        </div>
-        <div className="card-grid">
-          {nearbyWorkers.slice(0, 3).map((worker) => (
-            <WorkerPreviewCard key={worker.id} worker={worker} />
-          ))}
-        </div>
-      </section>
+      <CreateJobRequestForm
+        onCreateJobRequest={onCreateJobRequest}
+        onCreated={setLastCreatedJob}
+      />
 
-      <section className="dashboard-section">
-        <div className="section-heading">
-          <p className="eyebrow">Local activity</p>
-          <h2>Sample open requests</h2>
-        </div>
-        <div className="card-grid">
-          {openJobs.slice(0, 3).map((job) => (
-            <JobPreviewCard key={job.id} job={job} />
-          ))}
-        </div>
-      </section>
+      {lastCreatedJob && (
+        <p className="form-status" role="status">
+          Created open request: {lastCreatedJob.title}
+        </p>
+      )}
+
+      <ResidentJobRequests jobs={residentJobs} />
+
+      <NearbyWorkersView workerProfiles={workerProfiles} />
     </div>
   );
 }

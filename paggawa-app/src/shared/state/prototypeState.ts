@@ -1,8 +1,34 @@
-import { barangays, jobRequests, users, workerProfiles } from "../data/seedData";
-import type { JobRequest, User, WorkerProfile } from "../domain/models";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  barangays,
+  jobRequests as seedJobRequests,
+  users,
+  workerProfiles as seedWorkerProfiles,
+} from "../data/seedData";
+import type {
+  ComplaintNote,
+  JobRequest,
+  JobSource,
+  JobUrgency,
+  QuestManageableJobStatus,
+  RequesterType,
+  SkillCategory,
+  TrustSignal,
+  User,
+  WorkerProfile,
+} from "../domain/models";
 
 export type SurfaceKey = "mobile" | "quest";
 export type MobileMode = "resident" | "worker";
+
+export const CURRENT_RESIDENT_USER_ID = "user-resident-ana";
+export const CURRENT_BARANGAY_STAFF_USER_ID = "user-staff-rosa";
+
+const CREATED_JOB_REQUESTS_STORAGE_KEY = "paggawa.lane02.createdJobRequests";
+const CREATED_WORKER_PROFILES_STORAGE_KEY =
+  "paggawa.lane04.createdWorkerProfiles";
+const JOB_STATUS_UPDATES_STORAGE_KEY = "paggawa.lane04.jobStatusUpdates";
+const BARANGAY_NOTES_STORAGE_KEY = "paggawa.lane04.barangayNotes";
 
 export type ShellSummary = {
   totalWorkers: number;
@@ -17,58 +43,689 @@ export const privacyDisplayRules = [
   "No exact address before match",
 ];
 
-export const laneOneValidationRules = [
-  "Surface selector is visible",
-  "Paggawa Mobile can switch Resident and Worker dashboards",
-  "Paggawa Quest barangay dashboard is visible",
-  "Shared mock data appears in both surfaces",
-  "No creation, matching, payment, GPS, chat, backend, or auth behavior exists",
+export const laneTwoValidationRules = [
+  "Resident can create a mobile job request",
+  "Barangay staff can create an assisted job request",
+  "Created job requests persist with LocalStorage",
+  "Worker and Quest previews show approximate discovery fields only",
+  "No response, matching, payment, GPS, chat, backend, or auth behavior exists",
+];
+
+export const laneThreeValidationRules = [
+  "Resident can browse nearby worker cards",
+  "Resident can filter workers by skill category",
+  "Resident can view a safe public worker profile",
+  "Worker dashboard shows a display-only own profile summary",
+  "Barangay staff can view a read-only worker registry preview",
+  "No response, matching, contact unlock, reputation mutation, backend, auth, GPS, map, chat, or payment behavior exists",
+];
+
+export const laneFourValidationRules = [
+  "Quest board shows mobile and barangay-assisted job requests",
+  "Barangay staff can filter quest board jobs by status, category, and source",
+  "Barangay staff can update only open, needs follow-up, or cancelled statuses",
+  "Barangay staff can register workers into the shared local registry",
+  "Barangay notes persist locally without full dispute workflow behavior",
 ];
 
 export const prototypeData = {
   barangays,
   users,
-  workerProfiles,
-  jobRequests,
+  workerProfiles: seedWorkerProfiles,
+  jobRequests: seedJobRequests,
 };
 
-export function getShellSummary(): ShellSummary {
+export type CreateJobRequestInput = {
+  title: string;
+  category: SkillCategory;
+  description: string;
+  areaLabel: string;
+  urgency: JobUrgency;
+  source: JobSource;
+  requesterType: RequesterType;
+  budgetMin?: number;
+  budgetMax?: number;
+  createdByUserId?: string;
+  assistedByBarangayStaffId?: string;
+  assistedResidentLabel?: string;
+};
+
+export type CreateWorkerProfileInput = {
+  displayName: string;
+  skillCategories: SkillCategory[];
+  serviceAreas: string[];
+  approximateLocationLabel: string;
+  experienceYears: number;
+  bio: string;
+  availabilityNote: string;
+  barangayRegistered: boolean;
+  identityChecked: boolean;
+  communityReferred: boolean;
+};
+
+export type CreateBarangayNoteInput = {
+  targetType: ComplaintNote["targetType"];
+  targetId: string;
+  note: string;
+  createdBy?: string;
+};
+
+export type PrototypeState = {
+  shellSummary: ShellSummary;
+  jobRequests: JobRequest[];
+  openJobRequests: JobRequest[];
+  createdJobRequests: JobRequest[];
+  workerProfiles: WorkerProfile[];
+  createdWorkerProfiles: WorkerProfile[];
+  barangayNotes: ComplaintNote[];
+  createJobRequest: (input: CreateJobRequestInput) => JobRequest;
+  createWorkerProfile: (input: CreateWorkerProfileInput) => WorkerProfile;
+  updateQuestJobStatus: (
+    jobId: string,
+    status: QuestManageableJobStatus,
+  ) => void;
+  createBarangayNote: (input: CreateBarangayNoteInput) => ComplaintNote;
+};
+
+export function usePrototypeState(): PrototypeState {
+  const [createdJobRequests, setCreatedJobRequests] = useState<JobRequest[]>(
+    loadCreatedJobRequests,
+  );
+  const [createdWorkerProfiles, setCreatedWorkerProfiles] = useState<
+    WorkerProfile[]
+  >(loadCreatedWorkerProfiles);
+  const [jobStatusUpdates, setJobStatusUpdates] = useState<
+    Record<string, QuestManageableJobStatus>
+  >(loadJobStatusUpdates);
+  const [barangayNotes, setBarangayNotes] =
+    useState<ComplaintNote[]>(loadBarangayNotes);
+
+  useEffect(() => {
+    persistCreatedJobRequests(createdJobRequests);
+  }, [createdJobRequests]);
+
+  useEffect(() => {
+    persistCreatedWorkerProfiles(createdWorkerProfiles);
+  }, [createdWorkerProfiles]);
+
+  useEffect(() => {
+    persistJobStatusUpdates(jobStatusUpdates);
+  }, [jobStatusUpdates]);
+
+  useEffect(() => {
+    persistBarangayNotes(barangayNotes);
+  }, [barangayNotes]);
+
+  const allWorkerProfiles = useMemo(
+    () => [...seedWorkerProfiles, ...createdWorkerProfiles],
+    [createdWorkerProfiles],
+  );
+
+  const allJobRequests = useMemo(
+    () =>
+      applyJobStatusUpdates(
+        [...seedJobRequests, ...createdJobRequests],
+        jobStatusUpdates,
+      ),
+    [createdJobRequests, jobStatusUpdates],
+  );
+
+  const openJobRequests = useMemo(
+    () => getOpenJobRequests(allJobRequests),
+    [allJobRequests],
+  );
+
+  const shellSummary = useMemo(
+    () => getShellSummary(allJobRequests, allWorkerProfiles),
+    [allJobRequests, allWorkerProfiles],
+  );
+
+  const createJobRequest = useCallback((input: CreateJobRequestInput) => {
+    const newJob = buildJobRequest(input);
+
+    setCreatedJobRequests((currentJobs) => [newJob, ...currentJobs]);
+
+    return newJob;
+  }, []);
+
+  const createWorkerProfile = useCallback((input: CreateWorkerProfileInput) => {
+    const newWorker = buildWorkerProfile(input);
+
+    setCreatedWorkerProfiles((currentWorkers) => [newWorker, ...currentWorkers]);
+
+    return newWorker;
+  }, []);
+
+  const updateQuestJobStatus = useCallback(
+    (jobId: string, status: QuestManageableJobStatus) => {
+      setJobStatusUpdates((currentUpdates) => ({
+        ...currentUpdates,
+        [jobId]: status,
+      }));
+    },
+    [],
+  );
+
+  const createBarangayNote = useCallback((input: CreateBarangayNoteInput) => {
+    const newNote: ComplaintNote = {
+      id: createPrototypeId("note"),
+      targetType: input.targetType,
+      targetId: input.targetId,
+      note: input.note.trim(),
+      createdBy: input.createdBy ?? CURRENT_BARANGAY_STAFF_USER_ID,
+      createdAt: new Date().toISOString(),
+    };
+
+    setBarangayNotes((currentNotes) => [newNote, ...currentNotes]);
+
+    return newNote;
+  }, []);
+
   return {
-    totalWorkers: workerProfiles.length,
-    totalOpenJobs: getOpenJobRequests().length,
-    registeredWorkers: getRegisteredWorkers().length,
-    assistedRequests: getAssistedRequests().length,
+    shellSummary,
+    jobRequests: allJobRequests,
+    openJobRequests,
+    createdJobRequests,
+    workerProfiles: allWorkerProfiles,
+    createdWorkerProfiles,
+    barangayNotes,
+    createJobRequest,
+    createWorkerProfile,
+    updateQuestJobStatus,
+    createBarangayNote,
   };
 }
 
-export function getOpenJobRequests(): JobRequest[] {
-  return jobRequests.filter((job) => job.status === "open");
+export function getShellSummary(
+  allJobRequests: JobRequest[] = seedJobRequests,
+  allWorkerProfiles: WorkerProfile[] = seedWorkerProfiles,
+): ShellSummary {
+  return {
+    totalWorkers: allWorkerProfiles.length,
+    totalOpenJobs: getOpenJobRequests(allJobRequests).length,
+    registeredWorkers: getRegisteredWorkers(allWorkerProfiles).length,
+    assistedRequests: getAssistedRequests(allJobRequests).length,
+  };
 }
 
-export function getResidentPreviewWorkers(): WorkerProfile[] {
-  return workerProfiles.filter((worker) => worker.approximateDistanceKm <= 3.2);
+export function getOpenJobRequests(
+  allJobRequests: JobRequest[] = seedJobRequests,
+): JobRequest[] {
+  return allJobRequests
+    .filter((job) => job.status === "open")
+    .sort((firstJob, secondJob) =>
+      secondJob.createdAt.localeCompare(firstJob.createdAt),
+    );
 }
 
-export function getRegisteredWorkers(): WorkerProfile[] {
-  return workerProfiles.filter((worker) => worker.registryStatus === "registered");
+export function getQuestBoardJobs(
+  allJobRequests: JobRequest[] = seedJobRequests,
+): JobRequest[] {
+  return [...allJobRequests].sort((firstJob, secondJob) =>
+    secondJob.createdAt.localeCompare(firstJob.createdAt),
+  );
 }
 
-export function getAssistedRequests(): JobRequest[] {
-  return jobRequests.filter((job) => job.requesterType === "barangay_assisted");
+export function getResidentPreviewWorkers(
+  allWorkerProfiles: WorkerProfile[] = seedWorkerProfiles,
+): WorkerProfile[] {
+  return allWorkerProfiles.filter((worker) => worker.approximateDistanceKm <= 3.2);
 }
 
-export function getWorkerDashboardProfile(): WorkerProfile {
-  return workerProfiles[0];
+export function getResidentDiscoveryWorkers(
+  selectedCategory?: SkillCategory,
+  allWorkerProfiles: WorkerProfile[] = seedWorkerProfiles,
+): WorkerProfile[] {
+  return getResidentPreviewWorkers(allWorkerProfiles)
+    .filter((worker) =>
+      selectedCategory ? worker.skillCategories.includes(selectedCategory) : true,
+    )
+    .sort((firstWorker, secondWorker) => {
+      if (firstWorker.approximateDistanceKm !== secondWorker.approximateDistanceKm) {
+        return firstWorker.approximateDistanceKm - secondWorker.approximateDistanceKm;
+      }
+
+      return (secondWorker.rating ?? 0) - (firstWorker.rating ?? 0);
+    });
+}
+
+export function getWorkerById(
+  workerId: string,
+  allWorkerProfiles: WorkerProfile[] = seedWorkerProfiles,
+): WorkerProfile | undefined {
+  return allWorkerProfiles.find((worker) => worker.id === workerId);
+}
+
+export function getWorkerRegistryWorkers(
+  allWorkerProfiles: WorkerProfile[] = seedWorkerProfiles,
+): WorkerProfile[] {
+  return [...allWorkerProfiles].sort((firstWorker, secondWorker) => {
+    if (firstWorker.registryStatus !== secondWorker.registryStatus) {
+      return firstWorker.registryStatus === "registered" ? -1 : 1;
+    }
+
+    return firstWorker.displayName.localeCompare(secondWorker.displayName);
+  });
+}
+
+export function getWorkerTrustSignals(worker: WorkerProfile): TrustSignal[] {
+  const signals: TrustSignal[] = [];
+
+  if (worker.barangayRegistered) {
+    signals.push("Barangay-registered");
+  }
+
+  if (worker.identityChecked) {
+    signals.push("Identity checked");
+  }
+
+  if (worker.communityReferred) {
+    signals.push("Community-referred");
+  }
+
+  if (worker.noUnresolvedComplaints) {
+    signals.push("No unresolved complaints");
+  }
+
+  return signals;
+}
+
+export function getRegisteredWorkers(
+  allWorkerProfiles: WorkerProfile[] = seedWorkerProfiles,
+): WorkerProfile[] {
+  return allWorkerProfiles.filter((worker) => worker.registryStatus === "registered");
+}
+
+export function getAssistedRequests(
+  allJobRequests: JobRequest[] = seedJobRequests,
+): JobRequest[] {
+  return allJobRequests
+    .filter((job) => job.requesterType === "barangay_assisted")
+    .sort((firstJob, secondJob) =>
+      secondJob.createdAt.localeCompare(firstJob.createdAt),
+    );
+}
+
+export function getResidentJobRequests(
+  residentUserId: string,
+  allJobRequests: JobRequest[] = seedJobRequests,
+): JobRequest[] {
+  return allJobRequests
+    .filter((job) => job.createdByUserId === residentUserId)
+    .sort((firstJob, secondJob) =>
+      secondJob.createdAt.localeCompare(firstJob.createdAt),
+    );
+}
+
+export function getWorkerDashboardProfile(
+  allWorkerProfiles: WorkerProfile[] = seedWorkerProfiles,
+): WorkerProfile {
+  return allWorkerProfiles[0];
 }
 
 export function getUserById(userId: string): User | undefined {
   return users.find((user) => user.id === userId);
 }
 
-export function hasLaneOnePublicPreviewFields(job: JobRequest): boolean {
+export function hasSafePublicPreviewFields(job: JobRequest): boolean {
   return Boolean(
     job.areaLabel &&
       typeof job.approximateDistanceKm === "number" &&
       job.privacyNote,
+  );
+}
+
+function buildJobRequest(input: CreateJobRequestInput): JobRequest {
+  const normalizedArea = input.areaLabel.trim();
+  const source = input.source;
+
+  return {
+    id: createPrototypeId("job"),
+    title: input.title.trim(),
+    category: input.category,
+    description: input.description.trim(),
+    status: "open",
+    source,
+    barangayId: getBarangayIdForArea(normalizedArea),
+    areaLabel: normalizedArea,
+    approximateDistanceKm: getApproximateDistanceForArea(normalizedArea),
+    urgency: input.urgency,
+    requesterType: input.requesterType,
+    createdByUserId: input.createdByUserId,
+    assistedByBarangayStaffId: input.assistedByBarangayStaffId,
+    assistedResidentLabel: input.assistedResidentLabel?.trim() || undefined,
+    budgetMin: input.budgetMin,
+    budgetMax: input.budgetMax,
+    privacyNote:
+      source === "mobile"
+        ? "Exact address and contact hidden before match."
+        : "Assisted request shows approximate area only.",
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function buildWorkerProfile(input: CreateWorkerProfileInput): WorkerProfile {
+  const normalizedDisplayName = input.displayName.trim();
+  const normalizedLocation = input.approximateLocationLabel.trim();
+  const serviceAreas = input.serviceAreas
+    .map((serviceArea) => serviceArea.trim())
+    .filter(Boolean);
+  const skillCategories = input.skillCategories;
+  const primaryCategory = skillCategories[0];
+
+  return {
+    id: createPrototypeId("worker-profile"),
+    userId: createPrototypeId("assisted-worker"),
+    displayName: normalizedDisplayName,
+    barangayId: getBarangayIdForArea(normalizedLocation),
+    primaryCategory,
+    skillCategories,
+    headline: `${skillCategories.join(", ")} services around ${normalizedLocation}.`,
+    bio: input.bio.trim(),
+    serviceAreas,
+    approximateLocationLabel: normalizedLocation,
+    approximateDistanceKm: getApproximateDistanceForArea(normalizedLocation),
+    serviceRadiusKm: 3,
+    experienceYears: Math.max(0, input.experienceYears),
+    barangayRegistered: input.barangayRegistered,
+    identityChecked: input.identityChecked,
+    communityReferred: input.communityReferred,
+    trustSignals: buildTrustSignals(input),
+    completedJobs: 0,
+    rating: undefined,
+    reviewsCount: 0,
+    referralCount: 0,
+    noUnresolvedComplaints: true,
+    availabilityNote: input.availabilityNote.trim(),
+    registryStatus: "registered",
+  };
+}
+
+function buildTrustSignals(input: CreateWorkerProfileInput): TrustSignal[] {
+  const signals: TrustSignal[] = [];
+
+  if (input.barangayRegistered) {
+    signals.push("Barangay-registered");
+  }
+
+  if (input.identityChecked) {
+    signals.push("Identity checked");
+  }
+
+  if (input.communityReferred) {
+    signals.push("Community-referred");
+  }
+
+  signals.push("No unresolved complaints");
+
+  return signals;
+}
+
+function getBarangayIdForArea(areaLabel: string): string {
+  const normalizedArea = areaLabel.toLowerCase();
+  const matchingBarangay = barangays.find((barangay) =>
+    barangay.pilotAreas.some(
+      (pilotArea) => pilotArea.toLowerCase() === normalizedArea,
+    ),
+  );
+
+  return matchingBarangay?.id ?? barangays[0].id;
+}
+
+function getApproximateDistanceForArea(areaLabel: string): number {
+  const distanceByArea = new Map<string, number>([
+    ["anabu", 0.7],
+    ["anabu area", 0.7],
+    ["bucandala", 1.2],
+    ["bucandala area", 1.2],
+    ["malagasang", 1.9],
+    ["malagasang area", 1.9],
+    ["bayan luma", 2.8],
+    ["bayan luma area", 2.8],
+    ["poblacion", 2.4],
+    ["poblacion area", 2.4],
+  ]);
+
+  return distanceByArea.get(areaLabel.toLowerCase()) ?? 2.5;
+}
+
+function applyJobStatusUpdates(
+  jobs: JobRequest[],
+  jobStatusUpdates: Record<string, QuestManageableJobStatus>,
+): JobRequest[] {
+  return jobs.map((job) => ({
+    ...job,
+    status: jobStatusUpdates[job.id] ?? job.status,
+  }));
+}
+
+function createPrototypeId(prefix: string): string {
+  if (typeof window !== "undefined" && window.crypto?.randomUUID) {
+    return `${prefix}-${window.crypto.randomUUID()}`;
+  }
+
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function loadCreatedJobRequests(): JobRequest[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const storedJobs = window.localStorage.getItem(CREATED_JOB_REQUESTS_STORAGE_KEY);
+
+    if (!storedJobs) {
+      return [];
+    }
+
+    const parsedJobs: unknown = JSON.parse(storedJobs);
+
+    if (!Array.isArray(parsedJobs)) {
+      return [];
+    }
+
+    return parsedJobs.filter(isStoredJobRequest);
+  } catch {
+    return [];
+  }
+}
+
+function persistCreatedJobRequests(createdJobs: JobRequest[]): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(
+    CREATED_JOB_REQUESTS_STORAGE_KEY,
+    JSON.stringify(createdJobs),
+  );
+}
+
+function loadCreatedWorkerProfiles(): WorkerProfile[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const storedWorkers = window.localStorage.getItem(
+      CREATED_WORKER_PROFILES_STORAGE_KEY,
+    );
+
+    if (!storedWorkers) {
+      return [];
+    }
+
+    const parsedWorkers: unknown = JSON.parse(storedWorkers);
+
+    if (!Array.isArray(parsedWorkers)) {
+      return [];
+    }
+
+    return parsedWorkers.filter(isStoredWorkerProfile);
+  } catch {
+    return [];
+  }
+}
+
+function persistCreatedWorkerProfiles(createdWorkers: WorkerProfile[]): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(
+    CREATED_WORKER_PROFILES_STORAGE_KEY,
+    JSON.stringify(createdWorkers),
+  );
+}
+
+function loadJobStatusUpdates(): Record<string, QuestManageableJobStatus> {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  try {
+    const storedUpdates = window.localStorage.getItem(
+      JOB_STATUS_UPDATES_STORAGE_KEY,
+    );
+
+    if (!storedUpdates) {
+      return {};
+    }
+
+    const parsedUpdates: unknown = JSON.parse(storedUpdates);
+
+    if (typeof parsedUpdates !== "object" || parsedUpdates === null) {
+      return {};
+    }
+
+    return Object.fromEntries(
+      Object.entries(parsedUpdates).filter(([, status]) =>
+        isQuestManageableJobStatus(status),
+      ),
+    );
+  } catch {
+    return {};
+  }
+}
+
+function persistJobStatusUpdates(
+  jobStatusUpdates: Record<string, QuestManageableJobStatus>,
+): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(
+    JOB_STATUS_UPDATES_STORAGE_KEY,
+    JSON.stringify(jobStatusUpdates),
+  );
+}
+
+function loadBarangayNotes(): ComplaintNote[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const storedNotes = window.localStorage.getItem(BARANGAY_NOTES_STORAGE_KEY);
+
+    if (!storedNotes) {
+      return [];
+    }
+
+    const parsedNotes: unknown = JSON.parse(storedNotes);
+
+    if (!Array.isArray(parsedNotes)) {
+      return [];
+    }
+
+    return parsedNotes.filter(isStoredComplaintNote);
+  } catch {
+    return [];
+  }
+}
+
+function persistBarangayNotes(notes: ComplaintNote[]): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(BARANGAY_NOTES_STORAGE_KEY, JSON.stringify(notes));
+}
+
+function isStoredJobRequest(value: unknown): value is JobRequest {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const possibleJob = value as Partial<JobRequest>;
+
+  return Boolean(
+    possibleJob.id &&
+      possibleJob.title &&
+      possibleJob.category &&
+      possibleJob.description &&
+      possibleJob.status === "open" &&
+      possibleJob.source &&
+      possibleJob.areaLabel &&
+      possibleJob.urgency &&
+      possibleJob.createdAt,
+  );
+}
+
+function isStoredWorkerProfile(value: unknown): value is WorkerProfile {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const possibleWorker = value as Partial<WorkerProfile>;
+
+  return Boolean(
+    possibleWorker.id &&
+      possibleWorker.userId &&
+      possibleWorker.displayName &&
+      possibleWorker.barangayId &&
+      possibleWorker.primaryCategory &&
+      Array.isArray(possibleWorker.skillCategories) &&
+      possibleWorker.bio &&
+      Array.isArray(possibleWorker.serviceAreas) &&
+      possibleWorker.approximateLocationLabel &&
+      typeof possibleWorker.approximateDistanceKm === "number" &&
+      typeof possibleWorker.serviceRadiusKm === "number" &&
+      typeof possibleWorker.experienceYears === "number" &&
+      typeof possibleWorker.barangayRegistered === "boolean" &&
+      typeof possibleWorker.identityChecked === "boolean" &&
+      typeof possibleWorker.communityReferred === "boolean" &&
+      typeof possibleWorker.completedJobs === "number" &&
+      typeof possibleWorker.referralCount === "number" &&
+      typeof possibleWorker.noUnresolvedComplaints === "boolean" &&
+      possibleWorker.availabilityNote &&
+      possibleWorker.registryStatus === "registered",
+  );
+}
+
+function isStoredComplaintNote(value: unknown): value is ComplaintNote {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const possibleNote = value as Partial<ComplaintNote>;
+
+  return Boolean(
+    possibleNote.id &&
+      (possibleNote.targetType === "job" || possibleNote.targetType === "worker") &&
+      possibleNote.targetId &&
+      possibleNote.note &&
+      possibleNote.createdBy &&
+      possibleNote.createdAt,
+  );
+}
+
+function isQuestManageableJobStatus(
+  value: unknown,
+): value is QuestManageableJobStatus {
+  return (
+    value === "open" || value === "needs_follow_up" || value === "cancelled"
   );
 }
