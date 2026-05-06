@@ -1,0 +1,11 @@
+{
+  "product": "Paggawa",
+  "adaptMode": "CREATE",
+  "workspaceStatus": "BOOTSTRAPPED",
+  "currentPhase": "LANE_01_BUILT_PENDING_VALIDATION",
+  "nextAction": "VALIDATE_LANE_01_APP_SHELL",
+  "activeLane": "LANE-01-APP-SHELL",
+  "applicationCodeCreated": true,
+  "techStackSelected": true,
+  "lastUpdatedBy": "ADAPT_BUILDER"
+}
