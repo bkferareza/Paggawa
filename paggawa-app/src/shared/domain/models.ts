@@ -107,6 +107,7 @@ export type JobRequest = {
   createdByUserId?: string;
   assistedByBarangayStaffId?: string;
   assistedResidentLabel?: string;
+  matchedWorkerId?: string;
   budgetMin?: number;
   budgetMax?: number;
   preferredTiming?: string;
@@ -114,19 +115,42 @@ export type JobRequest = {
   createdAt: string;
 };
 
+export type JobResponseStatus = "sent" | "shortlisted" | "accepted" | "rejected";
+
 export type JobResponse = {
   id: string;
-  laneStatus: "future-placeholder";
+  jobRequestId: string;
+  workerProfileId: string;
+  message: string;
+  estimatedPrice?: number;
+  availability: string;
+  status: JobResponseStatus;
+  createdAt: string;
 };
+
+export type MatchStatus = "active" | "completed" | "cancelled";
 
 export type Match = {
   id: string;
-  laneStatus: "future-placeholder";
+  jobRequestId: string;
+  workerProfileId: string;
+  responseId: string;
+  status: MatchStatus;
+  contactShared: boolean;
+  createdAt: string;
+  completedAt?: string;
+  reviewId?: string;
 };
 
 export type Review = {
   id: string;
-  laneStatus: "future-placeholder";
+  jobRequestId: string;
+  matchId: string;
+  workerProfileId: string;
+  residentUserId: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
 };
 
 export type ComplaintNote = {

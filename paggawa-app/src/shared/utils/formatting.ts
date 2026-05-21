@@ -1,8 +1,10 @@
 import type {
+  JobResponseStatus,
   JobRequest,
   JobSource,
   JobStatus,
   JobUrgency,
+  MatchStatus,
   RequesterType,
   SkillCategory,
   TrustSignal,
@@ -68,6 +70,34 @@ export function formatJobStatus(status: JobStatus): string {
   return "Completed";
 }
 
+export function formatJobResponseStatus(status: JobResponseStatus): string {
+  if (status === "sent") {
+    return "Sent";
+  }
+
+  if (status === "shortlisted") {
+    return "Shortlisted";
+  }
+
+  if (status === "accepted") {
+    return "Accepted";
+  }
+
+  return "Rejected";
+}
+
+export function formatMatchStatus(status: MatchStatus): string {
+  if (status === "active") {
+    return "Active";
+  }
+
+  if (status === "completed") {
+    return "Completed";
+  }
+
+  return "Cancelled";
+}
+
 export function formatRequesterType(requesterType: RequesterType): string {
   return requesterType === "resident" ? "Resident" : "Barangay-assisted";
 }
@@ -82,6 +112,14 @@ export function formatUrgency(urgency: JobUrgency): string {
 
 export function formatBudgetAmount(amount: number): string {
   return `PHP ${amount.toLocaleString("en-PH")}`;
+}
+
+export function formatEstimatedPrice(amount?: number): string {
+  if (typeof amount !== "number") {
+    return "Estimate not listed";
+  }
+
+  return formatBudgetAmount(amount);
 }
 
 export function formatBudgetRange(job: JobRequest): string {

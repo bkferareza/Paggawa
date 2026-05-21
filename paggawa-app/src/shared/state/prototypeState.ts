@@ -7,10 +7,13 @@ import {
 } from "../data/seedData";
 import type {
   ComplaintNote,
+  JobResponse,
   JobRequest,
   JobSource,
   JobUrgency,
+  Match,
   QuestManageableJobStatus,
+  Review,
   RequesterType,
   SkillCategory,
   TrustSignal,
@@ -23,12 +26,16 @@ export type MobileMode = "resident" | "worker";
 
 export const CURRENT_RESIDENT_USER_ID = "user-resident-ana";
 export const CURRENT_BARANGAY_STAFF_USER_ID = "user-staff-rosa";
+export const CURRENT_WORKER_PROFILE_ID = "worker-profile-joel";
 
 const CREATED_JOB_REQUESTS_STORAGE_KEY = "paggawa.lane02.createdJobRequests";
 const CREATED_WORKER_PROFILES_STORAGE_KEY =
   "paggawa.lane04.createdWorkerProfiles";
 const JOB_STATUS_UPDATES_STORAGE_KEY = "paggawa.lane04.jobStatusUpdates";
 const BARANGAY_NOTES_STORAGE_KEY = "paggawa.lane04.barangayNotes";
+const JOB_RESPONSES_STORAGE_KEY = "paggawa.lane05.jobResponses";
+const MATCHES_STORAGE_KEY = "paggawa.lane05.matches";
+const REVIEWS_STORAGE_KEY = "paggawa.lane06.reviews";
 
 export type ShellSummary = {
   totalWorkers: number;
@@ -66,6 +73,21 @@ export const laneFourValidationRules = [
   "Barangay staff can update only open, needs follow-up, or cancelled statuses",
   "Barangay staff can register workers into the shared local registry",
   "Barangay notes persist locally without full dispute workflow behavior",
+];
+
+export const laneFiveValidationRules = [
+  "Worker can respond to an open job request",
+  "Resident can review worker responses for their own requests",
+  "Resident can accept one worker response and create an active match",
+  "Matched jobs leave the open queue and show matched status in Quest",
+  "Coordination details use a safe post-match placeholder only",
+];
+
+export const laneSixValidationRules = [
+  "Resident can mark active matched work as completed",
+  "Resident can leave one rating and review per match",
+  "Completed work updates the worker completed-jobs count",
+  "Worker rating and reviews are derived from the shared local review store",
 ];
 
 export const prototypeData = {
@@ -110,6 +132,21 @@ export type CreateBarangayNoteInput = {
   createdBy?: string;
 };
 
+export type CreateJobResponseInput = {
+  jobRequestId: string;
+  workerProfileId: string;
+  message: string;
+  estimatedPrice?: number;
+  availability: string;
+};
+
+export type CompleteMatchedJobInput = {
+  matchId: string;
+  rating: number;
+  comment: string;
+  residentUserId?: string;
+};
+
 export type PrototypeState = {
   shellSummary: ShellSummary;
   jobRequests: JobRequest[];
@@ -117,9 +154,15 @@ export type PrototypeState = {
   createdJobRequests: JobRequest[];
   workerProfiles: WorkerProfile[];
   createdWorkerProfiles: WorkerProfile[];
+  jobResponses: JobResponse[];
+  matches: Match[];
+  reviews: Review[];
   barangayNotes: ComplaintNote[];
   createJobRequest: (input: CreateJobRequestInput) => JobRequest;
   createWorkerProfile: (input: CreateWorkerProfileInput) => WorkerProfile;
+  createJobResponse: (input: CreateJobResponseInput) => JobResponse;
+  acceptWorkerResponse: (responseId: string) => Match | undefined;
+  completeMatchedJob: (input: CompleteMatchedJobInput) => Review | undefined;
   updateQuestJobStatus: (
     jobId: string,
     status: QuestManageableJobStatus,
@@ -137,6 +180,10 @@ export function usePrototypeState(): PrototypeState {
   const [jobStatusUpdates, setJobStatusUpdates] = useState<
     Record<string, QuestManageableJobStatus>
   >(loadJobStatusUpdates);
+  const [jobResponses, setJobResponses] =
+    useState<JobResponse[]>(loadJobResponses);
+  const [matches, setMatches] = useState<Match[]>(loadMatches);
+  const [reviews, setReviews] = useState<Review[]>(loadReviews);
   const [barangayNotes, setBarangayNotes] =
     useState<ComplaintNote[]>(loadBarangayNotes);
 
@@ -153,12 +200,24 @@ export function usePrototypeState(): PrototypeState {
   }, [jobStatusUpdates]);
 
   useEffect(() => {
+    persistJobResponses(jobResponses);
+  }, [jobResponses]);
+
+  useEffect(() => {
+    persistMatches(matches);
+  }, [matches]);
+
+  useEffect(() => {
+    persistReviews(reviews);
+  }, [reviews]);
+
+  useEffect(() => {
     persistBarangayNotes(barangayNotes);
   }, [barangayNotes]);
 
   const allWorkerProfiles = useMemo(
-    () => [...seedWorkerProfiles, ...createdWorkerProfiles],
-    [createdWorkerProfiles],
+    () => applyWorkerReputation([...seedWorkerProfiles, ...createdWorkerProfiles], reviews),
+    [createdWorkerProfiles, reviews],
   );
 
   const allJobRequests = useMemo(
@@ -166,8 +225,9 @@ export function usePrototypeState(): PrototypeState {
       applyJobStatusUpdates(
         [...seedJobRequests, ...createdJobRequests],
         jobStatusUpdates,
+        matches,
       ),
-    [createdJobRequests, jobStatusUpdates],
+    [createdJobRequests, jobStatusUpdates, matches],
   );
 
   const openJobRequests = useMemo(
@@ -206,6 +266,90 @@ export function usePrototypeState(): PrototypeState {
     [],
   );
 
+  const createJobResponse = useCallback((input: CreateJobResponseInput) => {
+    const newResponse = buildJobResponse(input);
+
+    setJobResponses((currentResponses) => [newResponse, ...currentResponses]);
+
+    return newResponse;
+  }, []);
+
+  const acceptWorkerResponse = useCallback(
+    (responseId: string) => {
+      const acceptedResponse = jobResponses.find(
+        (response) => response.id === responseId,
+      );
+
+      if (!acceptedResponse) {
+        return undefined;
+      }
+
+      const newMatch = buildMatch(acceptedResponse);
+
+      setJobResponses((currentResponses) =>
+        currentResponses.map((response) => {
+          if (response.jobRequestId !== acceptedResponse.jobRequestId) {
+            return response;
+          }
+
+          return {
+            ...response,
+            status: response.id === responseId ? "accepted" : "rejected",
+          };
+        }),
+      );
+
+      setMatches((currentMatches) => [
+        newMatch,
+        ...currentMatches.filter(
+          (match) => match.jobRequestId !== acceptedResponse.jobRequestId,
+        ),
+      ]);
+
+      return newMatch;
+    },
+    [jobResponses],
+  );
+
+  const completeMatchedJob = useCallback(
+    (input: CompleteMatchedJobInput) => {
+      const activeMatch = matches.find(
+        (match) => match.id === input.matchId && match.status === "active",
+      );
+
+      if (!activeMatch) {
+        return undefined;
+      }
+
+      const existingReview = reviews.find(
+        (review) => review.matchId === activeMatch.id,
+      );
+
+      if (existingReview) {
+        return existingReview;
+      }
+
+      const newReview = buildReview(activeMatch, input);
+
+      setMatches((currentMatches) =>
+        currentMatches.map((match) =>
+          match.id === activeMatch.id
+            ? {
+                ...match,
+                status: "completed",
+                completedAt: newReview.createdAt,
+                reviewId: newReview.id,
+              }
+            : match,
+        ),
+      );
+      setReviews((currentReviews) => [newReview, ...currentReviews]);
+
+      return newReview;
+    },
+    [matches, reviews],
+  );
+
   const createBarangayNote = useCallback((input: CreateBarangayNoteInput) => {
     const newNote: ComplaintNote = {
       id: createPrototypeId("note"),
@@ -228,9 +372,15 @@ export function usePrototypeState(): PrototypeState {
     createdJobRequests,
     workerProfiles: allWorkerProfiles,
     createdWorkerProfiles,
+    jobResponses,
+    matches,
+    reviews,
     barangayNotes,
     createJobRequest,
     createWorkerProfile,
+    createJobResponse,
+    acceptWorkerResponse,
+    completeMatchedJob,
     updateQuestJobStatus,
     createBarangayNote,
   };
@@ -294,6 +444,36 @@ export function getWorkerById(
   allWorkerProfiles: WorkerProfile[] = seedWorkerProfiles,
 ): WorkerProfile | undefined {
   return allWorkerProfiles.find((worker) => worker.id === workerId);
+}
+
+export function getResponsesForJob(
+  jobId: string,
+  allJobResponses: JobResponse[] = [],
+): JobResponse[] {
+  return allJobResponses
+    .filter((response) => response.jobRequestId === jobId)
+    .sort((firstResponse, secondResponse) =>
+      secondResponse.createdAt.localeCompare(firstResponse.createdAt),
+    );
+}
+
+export function getResponseByWorkerForJob(
+  workerProfileId: string,
+  jobRequestId: string,
+  allJobResponses: JobResponse[] = [],
+): JobResponse | undefined {
+  return getResponsesForJob(jobRequestId, allJobResponses).find(
+    (response) => response.workerProfileId === workerProfileId,
+  );
+}
+
+export function getMatchForJob(
+  jobId: string,
+  allMatches: Match[] = [],
+): Match | undefined {
+  return allMatches.find(
+    (match) => match.jobRequestId === jobId && match.status !== "cancelled",
+  );
 }
 
 export function getWorkerRegistryWorkers(
@@ -360,7 +540,10 @@ export function getResidentJobRequests(
 export function getWorkerDashboardProfile(
   allWorkerProfiles: WorkerProfile[] = seedWorkerProfiles,
 ): WorkerProfile {
-  return allWorkerProfiles[0];
+  return (
+    allWorkerProfiles.find((worker) => worker.id === CURRENT_WORKER_PROFILE_ID) ??
+    allWorkerProfiles[0]
+  );
 }
 
 export function getUserById(userId: string): User | undefined {
@@ -441,6 +624,44 @@ function buildWorkerProfile(input: CreateWorkerProfileInput): WorkerProfile {
   };
 }
 
+function buildJobResponse(input: CreateJobResponseInput): JobResponse {
+  return {
+    id: createPrototypeId("response"),
+    jobRequestId: input.jobRequestId,
+    workerProfileId: input.workerProfileId,
+    message: input.message.trim(),
+    estimatedPrice: input.estimatedPrice,
+    availability: input.availability.trim(),
+    status: "sent",
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function buildMatch(response: JobResponse): Match {
+  return {
+    id: createPrototypeId("match"),
+    jobRequestId: response.jobRequestId,
+    workerProfileId: response.workerProfileId,
+    responseId: response.id,
+    status: "active",
+    contactShared: true,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function buildReview(match: Match, input: CompleteMatchedJobInput): Review {
+  return {
+    id: createPrototypeId("review"),
+    jobRequestId: match.jobRequestId,
+    matchId: match.id,
+    workerProfileId: match.workerProfileId,
+    residentUserId: input.residentUserId ?? CURRENT_RESIDENT_USER_ID,
+    rating: clampReviewRating(input.rating),
+    comment: input.comment.trim(),
+    createdAt: new Date().toISOString(),
+  };
+}
+
 function buildTrustSignals(input: CreateWorkerProfileInput): TrustSignal[] {
   const signals: TrustSignal[] = [];
 
@@ -492,11 +713,65 @@ function getApproximateDistanceForArea(areaLabel: string): number {
 function applyJobStatusUpdates(
   jobs: JobRequest[],
   jobStatusUpdates: Record<string, QuestManageableJobStatus>,
+  matches: Match[] = [],
 ): JobRequest[] {
-  return jobs.map((job) => ({
-    ...job,
-    status: jobStatusUpdates[job.id] ?? job.status,
-  }));
+  const visibleMatchesByJobId = new Map(
+    matches
+      .filter((match) => match.status !== "cancelled")
+      .map((match) => [match.jobRequestId, match]),
+  );
+
+  return jobs.map((job) => {
+    const match = visibleMatchesByJobId.get(job.id);
+
+    return {
+      ...job,
+      status: match
+        ? match.status === "completed"
+          ? "completed"
+          : "matched"
+        : jobStatusUpdates[job.id] ?? job.status,
+      matchedWorkerId: match?.workerProfileId,
+    };
+  });
+}
+
+function applyWorkerReputation(
+  workerProfiles: WorkerProfile[],
+  reviews: Review[] = [],
+): WorkerProfile[] {
+  return workerProfiles.map((worker) => {
+    const workerReviews = reviews.filter(
+      (review) => review.workerProfileId === worker.id,
+    );
+
+    if (workerReviews.length === 0) {
+      return worker;
+    }
+
+    const existingRatingTotal =
+      typeof worker.rating === "number" ? worker.rating * worker.reviewsCount : 0;
+    const newRatingTotal = workerReviews.reduce(
+      (total, review) => total + review.rating,
+      0,
+    );
+    const reviewsCount = worker.reviewsCount + workerReviews.length;
+
+    return {
+      ...worker,
+      completedJobs: worker.completedJobs + workerReviews.length,
+      rating: Number(((existingRatingTotal + newRatingTotal) / reviewsCount).toFixed(1)),
+      reviewsCount,
+    };
+  });
+}
+
+function clampReviewRating(rating: number): number {
+  if (!Number.isFinite(rating)) {
+    return 5;
+  }
+
+  return Math.min(5, Math.max(1, Math.round(rating)));
 }
 
 function createPrototypeId(prefix: string): string {
@@ -646,6 +921,105 @@ function loadBarangayNotes(): ComplaintNote[] {
   }
 }
 
+function loadJobResponses(): JobResponse[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const storedResponses = window.localStorage.getItem(JOB_RESPONSES_STORAGE_KEY);
+
+    if (!storedResponses) {
+      return [];
+    }
+
+    const parsedResponses: unknown = JSON.parse(storedResponses);
+
+    if (!Array.isArray(parsedResponses)) {
+      return [];
+    }
+
+    return parsedResponses.filter(isStoredJobResponse);
+  } catch {
+    return [];
+  }
+}
+
+function persistJobResponses(responses: JobResponse[]): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(
+    JOB_RESPONSES_STORAGE_KEY,
+    JSON.stringify(responses),
+  );
+}
+
+function loadMatches(): Match[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const storedMatches = window.localStorage.getItem(MATCHES_STORAGE_KEY);
+
+    if (!storedMatches) {
+      return [];
+    }
+
+    const parsedMatches: unknown = JSON.parse(storedMatches);
+
+    if (!Array.isArray(parsedMatches)) {
+      return [];
+    }
+
+    return parsedMatches.filter(isStoredMatch);
+  } catch {
+    return [];
+  }
+}
+
+function persistMatches(matches: Match[]): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(MATCHES_STORAGE_KEY, JSON.stringify(matches));
+}
+
+function loadReviews(): Review[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const storedReviews = window.localStorage.getItem(REVIEWS_STORAGE_KEY);
+
+    if (!storedReviews) {
+      return [];
+    }
+
+    const parsedReviews: unknown = JSON.parse(storedReviews);
+
+    if (!Array.isArray(parsedReviews)) {
+      return [];
+    }
+
+    return parsedReviews.filter(isStoredReview);
+  } catch {
+    return [];
+  }
+}
+
+function persistReviews(reviews: Review[]): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(reviews));
+}
+
 function persistBarangayNotes(notes: ComplaintNote[]): void {
   if (typeof window === "undefined") {
     return;
@@ -722,10 +1096,84 @@ function isStoredComplaintNote(value: unknown): value is ComplaintNote {
   );
 }
 
+function isStoredJobResponse(value: unknown): value is JobResponse {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const possibleResponse = value as Partial<JobResponse>;
+
+  return Boolean(
+    possibleResponse.id &&
+      possibleResponse.jobRequestId &&
+      possibleResponse.workerProfileId &&
+      possibleResponse.message &&
+      possibleResponse.availability &&
+      isJobResponseStatus(possibleResponse.status) &&
+      possibleResponse.createdAt &&
+      (typeof possibleResponse.estimatedPrice === "undefined" ||
+        typeof possibleResponse.estimatedPrice === "number"),
+  );
+}
+
+function isStoredMatch(value: unknown): value is Match {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const possibleMatch = value as Partial<Match>;
+
+  return Boolean(
+    possibleMatch.id &&
+      possibleMatch.jobRequestId &&
+      possibleMatch.workerProfileId &&
+      possibleMatch.responseId &&
+      isMatchStatus(possibleMatch.status) &&
+      typeof possibleMatch.contactShared === "boolean" &&
+      possibleMatch.createdAt,
+  );
+}
+
+function isStoredReview(value: unknown): value is Review {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const possibleReview = value as Partial<Review>;
+
+  return Boolean(
+    possibleReview.id &&
+      possibleReview.jobRequestId &&
+      possibleReview.matchId &&
+      possibleReview.workerProfileId &&
+      possibleReview.residentUserId &&
+      typeof possibleReview.rating === "number" &&
+      possibleReview.rating >= 1 &&
+      possibleReview.rating <= 5 &&
+      possibleReview.comment &&
+      possibleReview.createdAt,
+  );
+}
+
 function isQuestManageableJobStatus(
   value: unknown,
 ): value is QuestManageableJobStatus {
   return (
     value === "open" || value === "needs_follow_up" || value === "cancelled"
   );
+}
+
+function isJobResponseStatus(
+  value: unknown,
+): value is JobResponse["status"] {
+  return (
+    value === "sent" ||
+    value === "shortlisted" ||
+    value === "accepted" ||
+    value === "rejected"
+  );
+}
+
+function isMatchStatus(value: unknown): value is Match["status"] {
+  return value === "active" || value === "completed" || value === "cancelled";
 }

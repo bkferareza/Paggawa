@@ -1,6 +1,6 @@
 # LANE-06 - Reputation
 
-STATUS: NOT_STARTED
+STATUS: VALIDATED
 
 ## Purpose
 

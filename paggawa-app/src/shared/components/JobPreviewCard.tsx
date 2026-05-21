@@ -10,6 +10,9 @@ import {
 
 type JobPreviewCardProps = {
   job: JobRequest;
+  onSelect?: (job: JobRequest) => void;
+  selected?: boolean;
+  selectLabel?: string;
   showBudget?: boolean;
   showResponsePlaceholder?: boolean;
   showRequesterType?: boolean;
@@ -18,13 +21,19 @@ type JobPreviewCardProps = {
 
 export function JobPreviewCard({
   job,
+  onSelect,
+  selected = false,
+  selectLabel = "View details",
   showBudget = false,
   showResponsePlaceholder = false,
   showRequesterType = false,
   showSource = false,
 }: JobPreviewCardProps) {
   return (
-    <article className="preview-card job-card">
+    <article
+      className={`preview-card job-card ${selected ? "selected" : ""}`}
+      aria-current={selected ? "true" : undefined}
+    >
       <div className="card-row">
         <span className="category-pill">{job.category}</span>
         <span className="status-pill">{formatJobStatus(job.status)}</span>
@@ -71,7 +80,16 @@ export function JobPreviewCard({
       </dl>
       {showResponsePlaceholder && (
         <button type="button" className="placeholder-button" disabled>
-          Response flow comes in Lane 05
+          Select a job to respond
+        </button>
+      )}
+      {onSelect && (
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => onSelect(job)}
+        >
+          {selectLabel}
         </button>
       )}
       <p className="privacy-note">{job.privacyNote}</p>

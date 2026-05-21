@@ -12,11 +12,17 @@ export default function App() {
   const [activeSurface, setActiveSurface] = useState<SurfaceKey | null>(null);
   const {
     barangayNotes,
+    acceptWorkerResponse,
+    completeMatchedJob,
     createBarangayNote,
+    createJobResponse,
     createJobRequest,
     createWorkerProfile,
+    jobResponses,
     jobRequests,
+    matches,
     openJobRequests,
+    reviews,
     shellSummary,
     updateQuestJobStatus,
     workerProfiles,
@@ -40,10 +46,16 @@ export default function App() {
 
       {activeSurface === "mobile" && (
         <MobileShell
+          jobResponses={jobResponses}
           jobRequests={jobRequests}
+          matches={matches}
           onBack={() => setActiveSurface(null)}
+          onAcceptWorkerResponse={acceptWorkerResponse}
+          onCompleteMatchedJob={completeMatchedJob}
           onCreateJobRequest={createJobRequest}
+          onCreateJobResponse={createJobResponse}
           openJobRequests={openJobRequests}
+          reviews={reviews}
           workerProfiles={workerProfiles}
         />
       )}
@@ -52,6 +64,7 @@ export default function App() {
         <QuestShell
           barangayNotes={barangayNotes}
           jobRequests={jobRequests}
+          matches={matches}
           onBack={() => setActiveSurface(null)}
           onCreateBarangayNote={createBarangayNote}
           onCreateJobRequest={createJobRequest}

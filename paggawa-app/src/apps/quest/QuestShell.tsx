@@ -2,6 +2,7 @@ import { ShellHeader } from "../../shared/components/ShellHeader";
 import type {
   ComplaintNote,
   JobRequest,
+  Match,
   QuestManageableJobStatus,
   WorkerProfile,
 } from "../../shared/domain/models";
@@ -15,6 +16,7 @@ import { BarangayDashboard } from "./barangay/BarangayDashboard";
 type QuestShellProps = {
   barangayNotes: ComplaintNote[];
   jobRequests: JobRequest[];
+  matches: Match[];
   onBack: () => void;
   onCreateBarangayNote: (input: CreateBarangayNoteInput) => ComplaintNote;
   onCreateJobRequest: (input: CreateJobRequestInput) => JobRequest;
@@ -29,6 +31,7 @@ type QuestShellProps = {
 export function QuestShell({
   barangayNotes,
   jobRequests,
+  matches,
   onBack,
   onCreateBarangayNote,
   onCreateJobRequest,
@@ -47,6 +50,7 @@ export function QuestShell({
       <BarangayDashboard
         barangayNotes={barangayNotes}
         jobRequests={jobRequests}
+        matches={matches}
         onCreateBarangayNote={onCreateBarangayNote}
         onCreateJobRequest={onCreateJobRequest}
         onCreateWorkerProfile={onCreateWorkerProfile}

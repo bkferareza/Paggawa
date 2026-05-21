@@ -1,11 +1,11 @@
 {
   "product": "Paggawa",
   "adaptMode": "CREATE",
-  "workspaceStatus": "BOOTSTRAPPED",
-  "currentPhase": "LANE_04_VALIDATED",
-  "nextAction": "BUILD_LANE_05_MATCHING",
-  "activeLane": "LANE-05-MATCHING",
+  "workspaceStatus": "V0_1_CLOSEOUT_COMPLETE",
+  "currentPhase": "GIT_CHECKPOINT_SUMMARY_CREATED",
+  "nextAction": "NONE",
+  "activeLane": "NONE",
   "applicationCodeCreated": true,
   "techStackSelected": true,
-  "lastUpdatedBy": "ADAPT_VALIDATOR"
+  "lastUpdatedBy": "ADAPT_ACTION_DISPATCHER"
 }

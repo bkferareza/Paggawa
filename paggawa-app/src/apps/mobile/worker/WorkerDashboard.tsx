@@ -1,16 +1,33 @@
 import { StatCard } from "../../../shared/components/StatCard";
-import type { JobRequest, WorkerProfile } from "../../../shared/domain/models";
-import { getWorkerDashboardProfile } from "../../../shared/state/prototypeState";
+import type {
+  JobResponse,
+  JobRequest,
+  Match,
+  WorkerProfile,
+} from "../../../shared/domain/models";
+import {
+  getWorkerDashboardProfile,
+  type CreateJobResponseInput,
+} from "../../../shared/state/prototypeState";
 import { formatRating } from "../../../shared/utils/formatting";
 import { NearbyJobsList } from "./NearbyJobsList";
+import { WorkerMatchedJobsPanel } from "./WorkerMatchedJobsPanel";
 import { WorkerProfileSummary } from "./WorkerProfileSummary";
 
 type WorkerDashboardProps = {
+  jobRequests: JobRequest[];
+  jobResponses: JobResponse[];
+  matches: Match[];
+  onCreateJobResponse: (input: CreateJobResponseInput) => JobResponse;
   openJobRequests: JobRequest[];
   workerProfiles: WorkerProfile[];
 };
 
 export function WorkerDashboard({
+  jobRequests,
+  jobResponses,
+  matches,
+  onCreateJobResponse,
   openJobRequests,
   workerProfiles,
 }: WorkerDashboardProps) {
@@ -41,7 +58,18 @@ export function WorkerDashboard({
         <WorkerProfileSummary worker={sampleProfile} />
       </section>
 
-      <NearbyJobsList jobs={openJobRequests} />
+      <NearbyJobsList
+        jobResponses={jobResponses}
+        jobs={openJobRequests}
+        onCreateJobResponse={onCreateJobResponse}
+        worker={sampleProfile}
+      />
+
+      <WorkerMatchedJobsPanel
+        jobs={jobRequests}
+        matches={matches}
+        worker={sampleProfile}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { StatCard } from "../../../shared/components/StatCard";
 import type {
   ComplaintNote,
   JobRequest,
+  Match,
   QuestManageableJobStatus,
   WorkerProfile,
 } from "../../../shared/domain/models";
@@ -24,6 +25,7 @@ import { WorkerRegistrationForm } from "./WorkerRegistrationForm";
 type BarangayDashboardProps = {
   barangayNotes: ComplaintNote[];
   jobRequests: JobRequest[];
+  matches: Match[];
   onCreateBarangayNote: (input: CreateBarangayNoteInput) => ComplaintNote;
   onCreateJobRequest: (input: CreateJobRequestInput) => JobRequest;
   onCreateWorkerProfile: (input: CreateWorkerProfileInput) => WorkerProfile;
@@ -37,6 +39,7 @@ type BarangayDashboardProps = {
 export function BarangayDashboard({
   barangayNotes,
   jobRequests,
+  matches,
   onCreateBarangayNote,
   onCreateJobRequest,
   onCreateWorkerProfile,
@@ -88,9 +91,11 @@ export function BarangayDashboard({
 
       <QuestBoardView
         jobs={allQuestBoardJobs}
+        matches={matches}
         notes={barangayNotes}
         onCreateBarangayNote={onCreateBarangayNote}
         onUpdateQuestJobStatus={onUpdateQuestJobStatus}
+        workerProfiles={workerProfiles}
       />
 
       <WorkerRegistrationForm

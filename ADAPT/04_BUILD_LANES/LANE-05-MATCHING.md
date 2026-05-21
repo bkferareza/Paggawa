@@ -1,6 +1,6 @@
 # LANE-05 - Matching
 
-STATUS: NOT_STARTED
+STATUS: VALIDATED
 
 ## Purpose
 

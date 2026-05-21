@@ -5,10 +5,16 @@ import {
   type ComplaintNote,
   type JobRequest,
   type JobSource,
+  type Match,
   type QuestManageableJobStatus,
   type SkillCategory,
+  type WorkerProfile,
 } from "../../../shared/domain/models";
-import type { CreateBarangayNoteInput } from "../../../shared/state/prototypeState";
+import {
+  getMatchForJob,
+  getWorkerById,
+  type CreateBarangayNoteInput,
+} from "../../../shared/state/prototypeState";
 import {
   formatBudgetRange,
   formatCreatedDate,
@@ -20,26 +26,31 @@ import {
 import { BarangayNotesPanel } from "./BarangayNotesPanel";
 
 type StatusFilter = "all" | QuestManageableJobStatus;
+type QuestVisibleStatusFilter = StatusFilter | "matched" | "completed";
 type CategoryFilter = "all" | SkillCategory;
 type SourceFilter = "all" | JobSource;
 
 type QuestBoardViewProps = {
   jobs: JobRequest[];
+  matches: Match[];
   notes: ComplaintNote[];
   onCreateBarangayNote: (input: CreateBarangayNoteInput) => ComplaintNote;
   onUpdateQuestJobStatus: (
     jobId: string,
     status: QuestManageableJobStatus,
   ) => void;
+  workerProfiles: WorkerProfile[];
 };
 
 export function QuestBoardView({
   jobs,
+  matches,
   notes,
   onCreateBarangayNote,
   onUpdateQuestJobStatus,
+  workerProfiles,
 }: QuestBoardViewProps) {
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<QuestVisibleStatusFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
 
@@ -69,12 +80,16 @@ export function QuestBoardView({
           <span>Status</span>
           <select
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+            onChange={(event) =>
+              setStatusFilter(event.target.value as QuestVisibleStatusFilter)
+            }
           >
             <option value="all">All statuses</option>
             <option value="open">Open</option>
             <option value="needs_follow_up">Needs follow-up</option>
             <option value="cancelled">Cancelled</option>
+            <option value="matched">Matched</option>
+            <option value="completed">Completed</option>
           </select>
         </label>
 
@@ -110,64 +125,80 @@ export function QuestBoardView({
 
       {filteredJobs.length > 0 ? (
         <div className="quest-board-list">
-          {filteredJobs.map((job) => (
-            <article className="preview-card job-card quest-board-card" key={job.id}>
-              <div className="card-row">
-                <span className="category-pill">{job.category}</span>
-                <span className="status-pill">{formatJobStatus(job.status)}</span>
-              </div>
+          {filteredJobs.map((job) => {
+            const match = getMatchForJob(job.id, matches);
+            const matchedWorker = match
+              ? getWorkerById(match.workerProfileId, workerProfiles)
+              : undefined;
 
-              <h3>{job.title}</h3>
+            return (
+              <article
+                className="preview-card job-card quest-board-card"
+                key={job.id}
+              >
+                <div className="card-row">
+                  <span className="category-pill">{job.category}</span>
+                  <span className="status-pill">{formatJobStatus(job.status)}</span>
+                </div>
 
-              <dl className="detail-list">
-                <div>
-                  <dt>Area</dt>
-                  <dd>{job.areaLabel}</dd>
-                </div>
-                <div>
-                  <dt>Urgency</dt>
-                  <dd>{formatUrgency(job.urgency)}</dd>
-                </div>
-                <div>
-                  <dt>Budget</dt>
-                  <dd>{formatBudgetRange(job)}</dd>
-                </div>
-                <div>
-                  <dt>Source</dt>
-                  <dd>{formatJobSource(job.source)}</dd>
-                </div>
-                <div>
-                  <dt>Request</dt>
-                  <dd>{formatRequesterType(job.requesterType)}</dd>
-                </div>
-                <div>
-                  <dt>Created</dt>
-                  <dd>{formatCreatedDate(job.createdAt)}</dd>
-                </div>
-              </dl>
+                <h3>{job.title}</h3>
 
-              {isQuestManageableStatus(job.status) && (
-                <StatusSelect
-                  id={`quest-status-${job.id}`}
-                  label="Board status"
-                  value={job.status}
-                  onChange={(nextStatus) =>
-                    onUpdateQuestJobStatus(job.id, nextStatus)
-                  }
+                <dl className="detail-list">
+                  <div>
+                    <dt>Area</dt>
+                    <dd>{job.areaLabel}</dd>
+                  </div>
+                  <div>
+                    <dt>Urgency</dt>
+                    <dd>{formatUrgency(job.urgency)}</dd>
+                  </div>
+                  <div>
+                    <dt>Budget</dt>
+                    <dd>{formatBudgetRange(job)}</dd>
+                  </div>
+                  <div>
+                    <dt>Source</dt>
+                    <dd>{formatJobSource(job.source)}</dd>
+                  </div>
+                  <div>
+                    <dt>Request</dt>
+                    <dd>{formatRequesterType(job.requesterType)}</dd>
+                  </div>
+                  <div>
+                    <dt>Created</dt>
+                    <dd>{formatCreatedDate(job.createdAt)}</dd>
+                  </div>
+                  {match && (
+                    <div>
+                      <dt>Matched worker</dt>
+                      <dd>{matchedWorker?.displayName ?? "Worker profile unavailable"}</dd>
+                    </div>
+                  )}
+                </dl>
+
+                {isQuestManageableStatus(job.status) && (
+                  <StatusSelect
+                    id={`quest-status-${job.id}`}
+                    label="Board status"
+                    value={job.status}
+                    onChange={(nextStatus) =>
+                      onUpdateQuestJobStatus(job.id, nextStatus)
+                    }
+                  />
+                )}
+
+                <BarangayNotesPanel
+                  notes={notes}
+                  targetId={job.id}
+                  targetLabel={job.title}
+                  targetType="job"
+                  onCreateBarangayNote={onCreateBarangayNote}
                 />
-              )}
 
-              <BarangayNotesPanel
-                notes={notes}
-                targetId={job.id}
-                targetLabel={job.title}
-                targetType="job"
-                onCreateBarangayNote={onCreateBarangayNote}
-              />
-
-              <p className="privacy-note">{job.privacyNote}</p>
-            </article>
-          ))}
+                <p className="privacy-note">{job.privacyNote}</p>
+              </article>
+            );
+          })}
         </div>
       ) : (
         <p className="empty-state">No quest board jobs match these filters.</p>

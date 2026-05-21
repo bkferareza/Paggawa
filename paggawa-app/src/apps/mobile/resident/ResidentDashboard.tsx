@@ -1,10 +1,17 @@
 import { useState } from "react";
 import { StatCard } from "../../../shared/components/StatCard";
-import type { JobRequest, WorkerProfile } from "../../../shared/domain/models";
+import type {
+  JobResponse,
+  JobRequest,
+  Match,
+  Review,
+  WorkerProfile,
+} from "../../../shared/domain/models";
 import {
   CURRENT_RESIDENT_USER_ID,
   getResidentJobRequests,
   getResidentPreviewWorkers,
+  type CompleteMatchedJobInput,
   type CreateJobRequestInput,
 } from "../../../shared/state/prototypeState";
 import { CreateJobRequestForm } from "./CreateJobRequestForm";
@@ -12,16 +19,26 @@ import { NearbyWorkersView } from "./NearbyWorkersView";
 import { ResidentJobRequests } from "./ResidentJobRequests";
 
 type ResidentDashboardProps = {
+  jobResponses: JobResponse[];
   jobRequests: JobRequest[];
+  matches: Match[];
+  onAcceptWorkerResponse: (responseId: string) => Match | undefined;
+  onCompleteMatchedJob: (input: CompleteMatchedJobInput) => Review | undefined;
   onCreateJobRequest: (input: CreateJobRequestInput) => JobRequest;
   openJobRequests: JobRequest[];
+  reviews: Review[];
   workerProfiles: WorkerProfile[];
 };
 
 export function ResidentDashboard({
+  jobResponses,
   jobRequests,
+  matches,
+  onAcceptWorkerResponse,
+  onCompleteMatchedJob,
   onCreateJobRequest,
   openJobRequests,
+  reviews,
   workerProfiles,
 }: ResidentDashboardProps) {
   const [lastCreatedJob, setLastCreatedJob] = useState<JobRequest | null>(null);
@@ -62,7 +79,15 @@ export function ResidentDashboard({
         </p>
       )}
 
-      <ResidentJobRequests jobs={residentJobs} />
+      <ResidentJobRequests
+        jobs={residentJobs}
+        jobResponses={jobResponses}
+        matches={matches}
+        onAcceptWorkerResponse={onAcceptWorkerResponse}
+        onCompleteMatchedJob={onCompleteMatchedJob}
+        reviews={reviews}
+        workerProfiles={workerProfiles}
+      />
 
       <NearbyWorkersView workerProfiles={workerProfiles} />
     </div>

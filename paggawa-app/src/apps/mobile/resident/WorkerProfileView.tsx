@@ -20,7 +20,7 @@ type WorkerProfileViewProps = {
 export function WorkerProfileView({
   worker,
   contextLabel = "Worker profile",
-  showRequestPlaceholder = true,
+  showRequestPlaceholder = false,
 }: WorkerProfileViewProps) {
   return (
     <aside className="worker-profile-panel" aria-label={`${worker.displayName} profile`}>
@@ -102,7 +102,7 @@ export function WorkerProfileView({
 
       {showRequestPlaceholder && (
         <button type="button" className="placeholder-button" disabled>
-          Request / matching comes in a later lane
+          Create a job request to invite responses
         </button>
       )}
 
